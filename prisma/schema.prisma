@@ -1,0 +1,518 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id               String             @id @default(uuid()) @db.Uuid
+  name             String             @map("full_name")
+  email            String?            @unique
+  phone            String?            @unique
+  password         String?
+  is_verified      Boolean            @default(false)
+  is_active        Boolean            @default(true)
+  otp              String?
+  otp_expires_at   DateTime?
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  otp_sent_at      DateTime?
+  customId         String?            @unique @map("custom_id")
+  image            String?
+  coins            Float              @default(0)
+  referralCode     String?            @unique
+  referredById     String?            @db.Uuid
+  resetToken       String?            @unique
+  resetTokenExpiry DateTime?
+  gender           String?
+  addresses        Address[]
+  cart             Cart[]
+  notifications    UserNotification[]
+  referredBy       Users?             @relation("ReferralRelation", fields: [referredById], references: [id])
+  referrals        Users[]            @relation("ReferralRelation")
+  wishlist         Wishlist[]
+  orders           Order[]
+
+  @@map("users")
+}
+
+model Address {
+  id          String      @id @default(uuid()) @db.Uuid
+  userId      String      @db.Uuid
+  fullName    String
+  phone       String
+  street      String
+  city        String
+  state       String
+  pincode     String
+  country     String
+  addressType AddressType
+  isDefault   Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  latitude    Float?
+  longitude   Float?
+  user        Users       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders      Order[]
+
+  @@map("addresses")
+}
+
+model Notification {
+  id            String             @id @default(uuid())
+  title         String
+  message       String
+  image         String?
+  sentAt        DateTime           @default(now())
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  audience      String             @default("all")
+  selectedUsers String[]           @default([])
+  recipients    UserNotification[]
+
+  @@map("notifications")
+}
+
+model UserNotification {
+  id             String       @id @default(uuid())
+  userId         String       @db.Uuid
+  notificationId String
+  isRead         Boolean      @default(false)
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user           Users        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([notificationId])
+  @@map("user_notifications")
+}
+
+model Vendor {
+  id                String         @id @default(uuid()) @db.Uuid
+  name              String         @map("full_name")
+  email             String         @unique
+  password          String?
+  BusinessName      String?
+  BusinessLogo      String?
+  BusinessAddress   String?
+  GSTNumber         String?
+  is_verified       Boolean        @default(false)
+  is_active         Boolean        @default(true)
+  isProfileComplete Boolean        @default(false)
+  otp               String?
+  otp_expires_at    DateTime?
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+  otp_sent_at       DateTime?
+  IdProof           String?
+  bankaccountnumber String?
+  bankifscode       String?
+  bankname          String?
+  phone             String         @unique
+  isApproved        ApprovalStatus @default(PENDING)
+  pancard           String?
+  rejectionReason   String?
+  isFavourite       Boolean        @default(false)
+  alternativePhone  String?
+  createdByAdmin    Boolean        @default(false)
+  setupToken        String?
+  setupTokenExpiry  DateTime?
+  customId          String?        @unique @map("custom_id")
+  deliveryRadius    Float?
+  latitude          Float?
+  longitude         Float?
+  products          Product[]
+
+  @@map("vendors")
+}
+
+model Admin {
+  id         String    @id @default(uuid()) @db.Uuid
+  name       String    @map("full_name")
+  email      String    @unique
+  password   String
+  role       String    @default("admin")
+  is_active  Boolean   @default(true)
+  last_login DateTime?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@map("admins")
+}
+
+model AdminAuditLog {
+  id        String   @id @default(uuid())
+  adminId   String
+  action    String
+  entity    String
+  entityId  String
+  oldValue  Json?
+  newValue  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@map("admin_audit_logs")
+}
+
+model Category {
+  id          String            @id @default(uuid())
+  name        String
+  description String?
+  image       String?
+  parentId    String?
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  level       CategoryLevel
+  parent      Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[]        @relation("CategoryHierarchy")
+  variants    CategoryVariant[]
+  products    Product[]
+  brands      Brand[]
+
+  @@index([parentId])
+}
+
+model CategoryVariant {
+  id            String      @id @default(uuid())
+  categoryId    String
+  variantNameId String
+  category      Category    @relation(fields: [categoryId], references: [id])
+  variantName   VariantName @relation(fields: [variantNameId], references: [id])
+}
+
+model Product {
+  id             String           @id @default(uuid())
+  categoryId     String
+  productName    String
+  description    String?
+  taxPercentage  Float?
+  codAllowed     Boolean          @default(false)
+  codExtraCharge Float?
+  returnAllowed  Boolean          @default(false)
+  returnDays     Int?
+  lowStock       Int?
+  addedByAdmin   Boolean          @default(false)
+  isFeatured     Boolean          @default(false)
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  highlights     Json?
+  searchKeywords String[]
+  brandId        String?
+  vendorId       String?          @db.Uuid
+  brand          Brand?           @relation(fields: [brandId], references: [id])
+  category       Category         @relation(fields: [categoryId], references: [id])
+  vendor         Vendor?          @relation(fields: [vendorId], references: [id])
+  variants       ProductVariant[]
+  deals          DealOfTheDay[]
+  wishlist       Wishlist[]
+  isFavourite    Boolean          @default(false)
+  banners        Banner[]         @relation("BannerProducts")
+  offers         Offer[]          @relation("OfferProducts")
+
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([vendorId])
+}
+
+model ProductVariant {
+  id              String             @id @default(uuid())
+  productId       String
+  costPrice       Float?
+  discount        Float?
+  stock           Int                @default(0)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  isPrimary       Boolean            @default(false)
+  expiryDate      DateTime?
+  price           Float?
+  sku             String             @unique
+  manufactureDate DateTime?
+  discountedPrice Float?
+  product         Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images          VariantImage[]
+  selections      VariantSelection[]
+  videos          VariantVideo[]
+  cart            Cart[]
+  orderItems      OrderItem[]
+
+  @@index([productId])
+}
+
+model VariantName {
+  id           String             @id @default(uuid())
+  name         String             @unique
+  createdAt    DateTime           @default(now())
+  inputType    VariantInputType   @default(SELECT)
+  isActive     Boolean            @default(true)
+  isRequired   Boolean            @default(false)
+  displayLabel String             @default("Select")
+  categoryBy   CategoryVariant[]
+  selections   VariantSelection[]
+  values       VariantValue[]
+}
+
+model VariantValue {
+  id            String             @id @default(uuid())
+  variantNameId String
+  value         String
+  createdAt     DateTime           @default(now())
+  colorCode     String?
+  selections    VariantSelection[]
+  variantName   VariantName        @relation(fields: [variantNameId], references: [id])
+
+  @@unique([variantNameId, value])
+}
+
+model VariantSelection {
+  id               String         @id @default(uuid())
+  productVariantId String
+  variantNameId    String
+  variantValueId   String
+  variant          ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  variantName      VariantName    @relation(fields: [variantNameId], references: [id])
+  variantValue     VariantValue   @relation(fields: [variantValueId], references: [id])
+
+  @@index([variantNameId])
+  @@index([variantValueId])
+}
+
+model VariantImage {
+  id        String         @id @default(uuid())
+  variantId String
+  imageUrl  String
+  isPrimary Boolean        @default(false)
+  createdAt DateTime       @default(now())
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+}
+
+model VariantVideo {
+  id        String         @id @default(uuid())
+  variantId String
+  videoUrl  String
+  isPrimary Boolean        @default(false)
+  createdAt DateTime       @default(now())
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+}
+
+model Offer {
+  id            String       @id @default(uuid())
+  title         String
+  description   String?
+  discountType  DiscountType
+  discountValue Float
+  startDate     DateTime
+  endDate       DateTime
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  image         String?
+  products      Product[]    @relation("OfferProducts")
+}
+
+model Coupan {
+  id                String       @id @default(uuid())
+  code              String       @unique
+  discountType      DiscountType
+  discountValue     Float
+  minOrderAmount    Float?
+  maxDiscountAmount Float?
+  startDate         DateTime
+  endDate           DateTime
+  usageLimit        Int?
+  usedCount         Int          @default(0)
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model Brand {
+  id         String    @id @default(uuid())
+  brandName  String
+  categoryId String
+  image      String?
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  products   Product[]
+  category   Category  @relation(fields: [categoryId], references: [id])
+
+  @@map("brands")
+}
+
+model Banner {
+  id        String         @id @default(uuid())
+  title     String
+  image     String
+  type      BannerType     @default(HOME)
+  linkType  BannerLinkType @default(NONE)
+  linkValue String?
+  startDate DateTime?
+  endDate   DateTime?
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  products  Product[]      @relation("BannerProducts")
+}
+
+model DealOfTheDay {
+  id            String       @id @default(uuid())
+  productId     String
+  discountType  DiscountType
+  discountValue Float
+  date          DateTime
+  startTime     DateTime?
+  endTime       DateTime?
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  product       Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([date])
+  @@map("deals_of_the_day")
+}
+
+model ReferralHistory {
+  id        String   @id @default(uuid())
+  email     String?  @unique
+  phone     String?  @unique
+  createdAt DateTime @default(now())
+}
+
+model Cart {
+  id               String         @id @default(uuid())
+  userId           String         @db.Uuid
+  productVariantId String
+  quantity         Int            @default(1)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  variant          ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  user             Users          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productVariantId])
+  @@map("carts")
+}
+
+model Wishlist {
+  id        String   @id @default(uuid())
+  userId    String   @db.Uuid
+  productId String
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("wishlists")
+}
+
+model CoinRewardSetting {
+  id                    String   @id @default(uuid())
+  coinsPerAmount        Int      @default(5)
+  rewardAmountThreshold Float    @default(100)
+  coinValueInCash       Float    @default(0.1)
+  minClaimCoin          Int      @default(100)
+  maxClaimCoin          Int      @default(1000)
+  referrerReward        Int      @default(50)
+  referredReward        Int      @default(20)
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("coin_reward_settings")
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum CategoryLevel {
+  TITLE
+  MAIN
+  SUB
+}
+
+enum VariantInputType {
+  TEXT
+  COLOR
+  SELECT
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FLAT
+}
+
+enum BannerType {
+  HOME
+  CATEGORY
+  OFFER
+  OTHER
+}
+
+enum BannerLinkType {
+  PRODUCT
+  CATEGORY
+  EXTERNAL
+  NONE
+}
+
+enum AddressType {
+  HOME
+  WORK
+  OTHERS
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  orderNumber     String      @unique
+  userId          String      @db.Uuid
+  totalAmount     Float
+  status          OrderStatus @default(PENDING)
+  paymentStatus   String      @default("PENDING")
+  paymentMethod   String      @default("COD")
+  addressId       String      @db.Uuid
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  user            Users       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  address         Address     @relation(fields: [addressId], references: [id])
+  items           OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id               String         @id @default(uuid())
+  orderId          String
+  productVariantId String
+  quantity         Int
+  price            Float
+  order            Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant          ProductVariant @relation(fields: [productVariantId], references: [id])
+
+  @@map("order_items")
+}
+
+model SharedCart {
+  id        String   @id @default(uuid())
+  items     Json
+  createdAt DateTime @default(now())
+
+  @@map("shared_carts")
+}
