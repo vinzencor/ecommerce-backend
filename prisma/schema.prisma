@@ -34,6 +34,12 @@ model Users {
   referrals        Users[]            @relation("ReferralRelation")
   wishlist         Wishlist[]
   orders           Order[]
+  supportTickets   SupportTicket[]
+  supportReplies   SupportReply[]
+  reviews          Review[]
+  rewards          UserReward[]
+  referralsSent    Referral[]         @relation("Referrer")
+  referralReceived Referral?          @relation("Referred")
 
   @@map("users")
 }
@@ -124,7 +130,10 @@ model Vendor {
   deliveryRadius    Float?
   latitude          Float?
   longitude         Float?
+  commissionPercentage Float @default(0)
   products          Product[]
+  payouts           Payout[]
+  commissions       Commission[]
 
   @@map("vendors")
 }
@@ -139,6 +148,7 @@ model Admin {
   last_login DateTime?
   createdAt  DateTime  @default(now()) @map("created_at")
   updatedAt  DateTime  @updatedAt @map("updated_at")
+  supportReplies SupportReply[]
 
   @@map("admins")
 }
@@ -214,6 +224,7 @@ model Product {
   isFavourite    Boolean          @default(false)
   banners        Banner[]         @relation("BannerProducts")
   offers         Offer[]          @relation("OfferProducts")
+  reviews        Review[]
 
   @@index([categoryId])
   @@index([brandId])
@@ -473,9 +484,14 @@ enum AddressType {
 enum OrderStatus {
   PENDING
   CONFIRMED
+  PROCESSING
   SHIPPED
   DELIVERED
   CANCELLED
+  RETURN_REQUESTED
+  RETURN_APPROVED
+  RETURN_REJECTED
+  RETURNED
 }
 
 model Order {
@@ -492,6 +508,8 @@ model Order {
   user            Users       @relation(fields: [userId], references: [id], onDelete: Cascade)
   address         Address     @relation(fields: [addressId], references: [id])
   items           OrderItem[]
+  commissions     Commission[]
+  refunds         Refund[]
 
   @@map("orders")
 }
@@ -514,4 +532,195 @@ model SharedCart {
   createdAt DateTime @default(now())
 
   @@map("shared_carts")
+}
+
+model SupportTicket {
+  id        String           @id @default(uuid())
+  userId    String           @db.Uuid
+  subject   String
+  message   String
+  status    TicketStatus     @default(OPEN)
+  priority  TicketPriority   @default(MEDIUM)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      Users            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replies   SupportReply[]
+
+  @@map("support_tickets")
+}
+
+model SupportReply {
+  id        String        @id @default(uuid())
+  ticketId  String
+  userId    String?       @db.Uuid
+  adminId   String?       @db.Uuid
+  message   String
+  createdAt DateTime      @default(now())
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user      Users?        @relation(fields: [userId], references: [id])
+  admin     Admin?        @relation(fields: [adminId], references: [id])
+
+  @@map("support_replies")
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  productId   String
+  userId      String   @db.Uuid
+  rating      Int
+  comment     String?
+  images      String[] @default([])
+  isPurchased Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user        Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+model Testimonial {
+  id        String   @id @default(uuid())
+  name      String
+  designation String?
+  image     String?
+  content   String
+  rating    Int?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("testimonials")
+}
+
+model Payout {
+  id        String       @id @default(uuid())
+  vendorId  String       @db.Uuid
+  amount    Float
+  status    PayoutStatus @default(PENDING)
+  method    String?
+  transactionId String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  vendor    Vendor       @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("payouts")
+}
+
+model Commission {
+  id         String   @id @default(uuid())
+  orderId    String
+  vendorId   String   @db.Uuid
+  amount     Float
+  percentage Float
+  createdAt  DateTime @default(now())
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  vendor     Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@map("commissions")
+}
+
+enum RefundType {
+  CANCEL
+  RETURN
+}
+
+model Refund {
+  id        String       @id @default(uuid())
+  orderId   String
+  amount    Float
+  reason    String?
+  type      RefundType   @default(RETURN)
+  status    RefundStatus @default(PENDING)
+  images    String[]     @default([])
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  order     Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("refunds")
+}
+
+model ReturnReason {
+  id        String     @id @default(uuid())
+  reason    String
+  type      RefundType @default(RETURN)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("return_reasons")
+}
+
+model CMS {
+  id        String   @id @default(uuid())
+  title     String
+  slug      String   @unique
+  content   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cms_pages")
+}
+
+model FAQ {
+  id        String   @id @default(uuid())
+  question  String
+  answer    String
+  type      String   @default("customer") // customer, vendor
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("faqs")
+}
+
+model UserReward {
+  id          String   @id @default(uuid())
+  userId      String   @db.Uuid
+  type        String   // COIN, COUPON, REFERRAL
+  amount      Float
+  description String?
+  createdAt   DateTime @default(now())
+  user        Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_rewards")
+}
+
+model Referral {
+  id           String   @id @default(uuid())
+  referrerId   String   @db.Uuid
+  referrer     Users    @relation("Referrer", fields: [referrerId], references: [id])
+  referredId   String   @unique @db.Uuid
+  referred     Users    @relation("Referred", fields: [referredId], references: [id])
+  status       String   @default("PENDING") // PENDING, SUCCESSFUL
+  rewardAmount Float?
+  createdAt    DateTime @default(now())
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REFUNDED
 }

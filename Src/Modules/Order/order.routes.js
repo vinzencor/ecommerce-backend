@@ -8,6 +8,8 @@ router.use(authenticate);
 
 router.post("/", (req, res) => orderController.placeOrder(req, res));
 router.get("/", (req, res) => orderController.getMyOrders(req, res));
+router.post("/:id/cancel", (req, res) => orderController.cancelOrder(req, res));
+router.post("/:id/return", (req, res) => orderController.requestReturn(req, res));
 router.get("/:id", (req, res) => orderController.getOrderById(req, res));
 
 export default router;

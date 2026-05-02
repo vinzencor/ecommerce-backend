@@ -128,25 +128,7 @@ class DealRepository {
         
         return this.db.dealOfTheDay.findMany({
             where: {
-                isActive: true,
-                date: {
-                    gte: new Date(new Date().setHours(0, 0, 0, 0)),
-                    lte: new Date(new Date().setHours(23, 59, 59, 999))
-                },
-                OR: [
-                    {
-                        AND: [
-                            { startTime: { lte: now } },
-                            { endTime: { gte: now } }
-                        ]
-                    },
-                    {
-                        AND: [
-                            { startTime: null },
-                            { endTime: null }
-                        ]
-                    }
-                ]
+                isActive: true
             },
             include: {
                 product: {

@@ -49,11 +49,7 @@ class HomeRepository {
       })),
       safeQuery("deals", () => this.db.dealOfTheDay.findMany({
         where: {
-          isActive: true,
-          date: {
-            gte: startOfToday,
-            lte: endOfToday,
-          },
+          isActive: true
         },
         include: {
           product: {
