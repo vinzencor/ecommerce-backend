@@ -7,7 +7,9 @@ import routes from "./Routes.js";
 
 const app = express();
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
 const normalizeOrigin = (value) => value?.trim().replace(/\/+$/, "");
 
@@ -27,6 +29,8 @@ const allowedOrigins = [
 const allowedOriginPatterns = [
   /^https:\/\/ecommerce-user[\w-]*\.netlify\.app$/,
   /^https:\/\/ecommercer-user[\w-]*\.netlify\.app$/,
+  /^https:\/\/ecommerce-admin-[\w-]*\.vercel\.app$/,
+  /^https:\/\/ecommerce-admin[\w-]*\.vercel\.app$/,
 ];
 
 const corsOptions = {
