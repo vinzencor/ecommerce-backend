@@ -6,6 +6,10 @@ import cookieParser from "cookie-parser";
 import routes from "./Routes.js";
 
 const app = express();
+app.use((req, res, next) => {
+  console.log(`Incoming request: ${req.method} ${req.url} | Origin: ${req.headers.origin}`);
+  next();
+});
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
@@ -20,6 +24,7 @@ const allowedOrigins = [
   "https://ecommerce-user11.netlify.app",
   "https://ecommerce-codeedex.netlify.app",
   "https://ecommerce-admin-zxsf-iabg0fghz-vinzencors-projects.vercel.app",
+  "https://ecommerce-admin-zxsf.vercel.app",
   "http://localhost:5173",
 ]
   .filter(Boolean)
