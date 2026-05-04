@@ -17,6 +17,7 @@ const allowedOrigins = [
   "https://ecommercer-user.netlify.app",
   "https://ecommerce-user11.netlify.app",
   "https://ecommerce-codeedex.netlify.app",
+  "https://ecommerce-admin-zxsf-iabg0fghz-vinzencors-projects.vercel.app",
   "http://localhost:5173",
 ]
   .filter(Boolean)
